@@ -31,6 +31,8 @@ class GenerateRSAKeyPair extends Operation {
                 name: "RSA Key Length",
                 type: "option",
                 value: [
+                    "256",
+                    "512",
                     "1024",
                     "2048",
                     "4096"
