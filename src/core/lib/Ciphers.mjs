@@ -70,9 +70,17 @@ function validateAffineInputs(a, b, alphabet) {
     const expandedAlphabet = Utils.expandAlphRange(alphabet);
     const modulus = expandedAlphabet.length;
     
-    // Default values if not provided
-    if (a === undefined || a === "" || isNaN(a)) a = 1;
-    if (b === undefined || b === "" || isNaN(b)) b = 0;
+    // Default values if not provided or ensure numbers
+    if (a === undefined || a === "") a = 1;
+    if (b === undefined || b === "") b = 0;
+    
+    // Convert to numbers and check if valid
+    a = Number(a);
+    b = Number(b);
+    
+    if (isNaN(a) || isNaN(b)) {
+        throw new OperationError("The values of a and b can only be integers.");
+    }
     
     if (!/^\+?(0|[1-9]\d*)$/.test(a) || !/^\+?(0|[1-9]\d*)$/.test(b)) {
         throw new OperationError("The values of a and b can only be integers.");
