@@ -54,6 +54,43 @@ export function affineEncode(input, args) {
 }
 
 /**
+ * Validates inputs for Affine cipher operations
+ * 
+ * @author Your Name
+ * @param {number} a
+ * @param {number} b
+ * @param {string} alphabet
+ * @returns {Object} Object containing validated a, b, and expanded alphabet along with modulus
+ * @throws {OperationError} if inputs are invalid
+ */
+function validateAffineInputs(a, b, alphabet) {
+    if (alphabet === "")
+        throw new OperationError("The alphabet cannot be empty.");
+    
+    const expandedAlphabet = Utils.expandAlphRange(alphabet);
+    const modulus = expandedAlphabet.length;
+    
+    // Default values if not provided
+    if (a === undefined || a === "" || isNaN(a)) a = 1;
+    if (b === undefined || b === "" || isNaN(b)) b = 0;
+    
+    if (!/^\+?(0|[1-9]\d*)$/.test(a) || !/^\+?(0|[1-9]\d*)$/.test(b)) {
+        throw new OperationError("The values of a and b can only be integers.");
+    }
+    
+    if (Utils.gcd(a, modulus) !== 1) {
+        throw new OperationError("The value of `a` (" + a + ") must be coprime to " + modulus + ".");
+    }
+    
+    return {
+        a: a,
+        b: b,
+        alphabet: expandedAlphabet,
+        modulus: modulus
+    };
+}
+
+/**
  * Generic affine encrypt/decrypt operation.
  * Allows for an expanded alphabet.
  *
@@ -66,35 +103,25 @@ export function affineEncode(input, args) {
  * @returns {string}
  */
 export function affineApplication(input, a, b, alphabet, affineFn) {
-    if (alphabet === "")
-        throw new OperationError("The alphabet cannot be empty.");
-
-    alphabet = Utils.expandAlphRange(alphabet);
-    let output = "";
-    const modulus = alphabet.length;
+    const validated = validateAffineInputs(a, b, alphabet);
+    a = validated.a;
+    b = validated.b;
+    let alphabetArray = validated.alphabet;
+    const modulus = validated.modulus;
 
     // If the alphabet contains letters of all the same case,
     // the assumption will be to match case.
-    const hasLower = /[a-z]/.test(alphabet);
-    const hasUpper = /[A-Z]/.test(alphabet);
+    const hasLower = /[a-z]/.test(alphabetArray);
+    const hasUpper = /[A-Z]/.test(alphabetArray);
     const matchCase = (hasLower && hasUpper) ? false : true;
 
     // If we are matching case, convert entire alphabet to lowercase.
     // This will simplify the encryption.
     if (matchCase)
-        alphabet = alphabet.map((c) => c.toLowerCase());
+        alphabetArray = alphabetArray.map((c) => c.toLowerCase());
 
-    if (a === undefined || a === "" || isNaN(a)) a = 1;
-    if (b === undefined || b === "" || isNaN(b)) b = 0;
-
-    if (!/^\+?(0|[1-9]\d*)$/.test(a) || !/^\+?(0|[1-9]\d*)$/.test(b)) {
-        throw new OperationError("The values of a and b can only be integers.");
-    }
-
-    if (Utils.gcd(a, modulus) !== 1) {
-        throw new OperationError("The value of `a` (" + a + ") must be coprime to " + modulus + ".");
-    }
-
+    let output = "";
+    
     // Apply affine function to each character in the input
     for (let i = 0; i < input.length; i++) {
         let outChar = "";
@@ -102,10 +129,10 @@ export function affineApplication(input, a, b, alphabet, affineFn) {
         let inChar = input[i];
         if (matchCase && isUpperCase(inChar)) inChar = inChar.toLowerCase();
 
-        const inVal = alphabet.indexOf(inChar);
+        const inVal = alphabetArray.indexOf(inChar);
 
         if (inVal >= 0) {
-            outChar = alphabet[affineFn(inVal, a, b, modulus)];
+            outChar = alphabetArray[affineFn(inVal, a, b, modulus)];
             if (matchCase && isUpperCase(input[i])) outChar = outChar.toUpperCase();
         } else {
             outChar += input[i];
@@ -171,31 +198,20 @@ export function affineEncrypt(input, a, b, alphabet="a-z") {
  * @returns {string}
  */
 export function affineDecrypt(input, a, b, alphabet="a-z") {
-    // Because we are calculating the modulus and inverses here, we have to perform
-    // many of the same tests that the affineApplication function does.
-    // TODO: figure out a way to avoid doing the tests twice.
-    //   Idea: make a checkInputs function.
-    //   Idea: move the tests into the affineEncrypt and affineDecryptInverse functions
-    //         so that affineApplication assumes valid inputs
-    if (alphabet === "")
-        throw new OperationError("The alphabet cannot be empty.");
-
-    if (a === undefined || a === "" || isNaN(a)) a = 1;
-    if (b === undefined || b === "" || isNaN(b)) b = 0;
-
-    if (!/^\+?(0|[1-9]\d*)$/.test(a) || !/^\+?(0|[1-9]\d*)$/.test(b)) {
-        throw new OperationError("The values of a and b can only be integers.");
-    }
-
-    const m = Utils.expandAlphRange(alphabet).length;
-    if (Utils.gcd(a, m) !== 1)
-        throw new OperationError("The value of `a` (" + a + ") must be coprime to " + m + ".");
-
+    // Validate inputs using our helper function
+    const validated = validateAffineInputs(a, b, alphabet);
+    a = validated.a;
+    b = validated.b;
+    const m = validated.modulus;
+    
+    // Calculate inverse parameters for decryption
     const aInv = Utils.modInv(a, m);
     const bInv = (m - b) % m;
+    
     if (aInv === null || aInv === undefined)
         throw new OperationError("The value of `a` (" + a + ") must be coprime to " + m + ".");
-    else return affineApplication(input, aInv, bInv, alphabet, decryptFn);
+    
+    return affineApplication(input, aInv, bInv, alphabet, decryptFn);
 }
 
 /**
