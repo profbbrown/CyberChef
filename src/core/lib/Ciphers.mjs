@@ -55,8 +55,8 @@ export function affineEncode(input, args) {
 
 /**
  * Validates inputs for Affine cipher operations
- * 
- * @author Your Name
+ *
+ * @author Jack Mahoney
  * @param {number} a
  * @param {number} b
  * @param {string} alphabet
@@ -66,30 +66,30 @@ export function affineEncode(input, args) {
 function validateAffineInputs(a, b, alphabet) {
     if (alphabet === "")
         throw new OperationError("The alphabet cannot be empty.");
-    
+
     const expandedAlphabet = Utils.expandAlphRange(alphabet);
     const modulus = expandedAlphabet.length;
-    
+
     // Default values if not provided or ensure numbers
     if (a === undefined || a === "") a = 1;
     if (b === undefined || b === "") b = 0;
-    
+
     // Convert to numbers and check if valid
     a = Number(a);
     b = Number(b);
-    
+
     if (isNaN(a) || isNaN(b)) {
         throw new OperationError("The values of a and b can only be integers.");
     }
-    
+
     if (!/^\+?(0|[1-9]\d*)$/.test(a) || !/^\+?(0|[1-9]\d*)$/.test(b)) {
         throw new OperationError("The values of a and b can only be integers.");
     }
-    
+
     if (Utils.gcd(a, modulus) !== 1) {
         throw new OperationError("The value of `a` (" + a + ") must be coprime to " + modulus + ".");
     }
-    
+
     return {
         a: a,
         b: b,
@@ -129,7 +129,7 @@ export function affineApplication(input, a, b, alphabet, affineFn) {
         alphabetArray = alphabetArray.map((c) => c.toLowerCase());
 
     let output = "";
-    
+
     // Apply affine function to each character in the input
     for (let i = 0; i < input.length; i++) {
         let outChar = "";
@@ -211,14 +211,14 @@ export function affineDecrypt(input, a, b, alphabet="a-z") {
     a = validated.a;
     b = validated.b;
     const m = validated.modulus;
-    
+
     // Calculate inverse parameters for decryption
     const aInv = Utils.modInv(a, m);
     const bInv = (m - b) % m;
-    
+
     if (aInv === null || aInv === undefined)
         throw new OperationError("The value of `a` (" + a + ") must be coprime to " + m + ".");
-    
+
     return affineApplication(input, aInv, bInv, alphabet, decryptFn);
 }
 
